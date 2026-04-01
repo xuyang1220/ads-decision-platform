@@ -1,10 +1,19 @@
-from typing import Optional
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class BudgetState:
+class PacingDirective(BaseModel):
+    pacing_multiplier: float
+    throttle_prob: float
+    shadow_lambda: float | None = None
+    reason: str = ""
+    debug: dict[str, Any] = Field(default_factory=dict)
+
+
+class BudgetState(BaseModel):
     entity_id: str
     date: str
     budget_amount: float
@@ -12,43 +21,17 @@ class BudgetState:
     target_spend_so_far: float
     pacing_multiplier: float
     throttle_prob: float
-    shadow_lambda: Optional[float]
+    shadow_lambda: float | None = None
     last_update_ts_ms: int
     stale: bool = False
-    debug: dict | None = None
+    debug: dict[str, Any] = Field(default_factory=dict)
 
-@dataclass
-class PacingDirective:
-    pacing_multiplier: float
-    throttle_prob: float
-    shadow_lambda: Optional[float] = None
-    reason: str = ""
-    debug: dict | None = None
-
-class BudgetController(ABC):
-    @abstractmethod
-    def update(self, state: BudgetState) -> PacingDirective:
-        raise NotImplementedError
-
-class BoundedProportionalController(BudgetController):
-    def __init__(
-        self,
-        kp: float,
-        min_multiplier: float = 0.5,
-        max_multiplier: float = 1.5,
-    ):
-        self.kp = kp
-        self.min_multiplier = min_multiplier
-        self.max_multiplier = max_multiplier
-
-    def update(self, state: BudgetState) -> PacingDirective:
-        error = state.target_spend_so_far - state.spend_so_far
-        raw_mult = state.pacing_multiplier * (1.0 + self.kp * error / max(state.budget_amount, 1e-9))
-        mult = min(self.max_multiplier, max(self.min_multiplier, raw_mult))
+    @property
+    def current_directive(self) -> PacingDirective:
         return PacingDirective(
-            pacing_multiplier=mult,
-            throttle_prob=1.0,
-            shadow_lambda=state.shadow_lambda,
-            reason="bounded_proportional_update",
-            debug={"error": error, "raw_mult": raw_mult},
+            pacing_multiplier=self.pacing_multiplier,
+            throttle_prob=self.throttle_prob,
+            shadow_lambda=self.shadow_lambda,
+            reason="state_snapshot",
+            debug={"stale": self.stale},
         )

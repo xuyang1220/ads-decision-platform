@@ -1,33 +1,31 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class RequestContext:
+class RequestContext(BaseModel):
     request_id: str
     timestamp_ms: int
-    user_id: Optional[str]
+    user_id: str | None = None
     device_type: str
     country: str
     placement: str
     app_or_site: str
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class AdCandidate:
+class AdCandidate(BaseModel):
     ad_id: str
     campaign_id: str
     adgroup_id: str
-    advertiser_id: Optional[str]
+    advertiser_id: str | None = None
     base_bid: float
-    features: Dict[str, Any] = field(default_factory=dict)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    features: dict[str, Any] = Field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class AuctionInput:
+class AuctionInput(BaseModel):
     request: RequestContext
-    candidates: List[AdCandidate]
+    candidates: list[AdCandidate]

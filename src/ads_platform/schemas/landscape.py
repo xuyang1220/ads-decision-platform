@@ -1,38 +1,22 @@
-from typing import Optional, Dict, Any
+from __future__ import annotations
 
-@dataclass
-class LandscapeContext:
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class LandscapeContext(BaseModel):
     campaign_id: str
     adgroup_id: str
-    segment_id: Optional[int]
+    segment_id: int | None = None
     channel: str
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class LandscapeEstimate:
+class LandscapeEstimate(BaseModel):
     win_prob: float
     expected_cost: float
-    expected_cpm: Optional[float] = None
-    expected_value: Optional[float] = None
+    expected_cpm: float | None = None
+    expected_value: float | None = None
     model_version: str = ""
-    debug: dict | None = None
-
-
-class BidLandscapeModel(ABC):
-    @abstractmethod
-    def estimate(
-        self,
-        bid: float,
-        context: LandscapeContext,
-    ) -> LandscapeEstimate:
-        raise NotImplementedError
-
-    @abstractmethod
-    def optimal_bid(
-        self,
-        context: LandscapeContext,
-        value_per_click: float,
-        bid_cap: Optional[float] = None,
-    ) -> float:
-        raise NotImplementedError
+    debug: dict[str, Any] = Field(default_factory=dict)
