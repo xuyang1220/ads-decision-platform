@@ -1,6 +1,0 @@
-pydantic<3,>=2.6
-fastapi<1,>=0.110
-uvicorn<1,>=0.29
-
-[dev]
-pytest<9,>=8.0
