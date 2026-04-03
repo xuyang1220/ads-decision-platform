@@ -1,0 +1,36 @@
+{
+  "numeric_features": [
+    {
+      "name": "base_bid",
+      "default": 0.0,
+      "log1p": true
+    },
+    {
+      "name": "historical_ctr",
+      "default": 0.0,
+      "log1p": false
+    }
+  ],
+  "categorical_features": [
+    {
+      "name": "device_type",
+      "num_buckets": 64,
+      "default_token": "__MISSING__"
+    },
+    {
+      "name": "country",
+      "num_buckets": 64,
+      "default_token": "__MISSING__"
+    },
+    {
+      "name": "placement",
+      "num_buckets": 32,
+      "default_token": "__MISSING__"
+    },
+    {
+      "name": "campaign_id",
+      "num_buckets": 128,
+      "default_token": "__MISSING__"
+    }
+  ]
+}
