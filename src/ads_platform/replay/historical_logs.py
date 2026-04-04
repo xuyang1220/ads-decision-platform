@@ -38,6 +38,19 @@ def record_from_json(payload: dict[str, Any], default_num_slots: int = 1) -> Rep
     record_id = str(payload.get("record_id", request_payload.get("request_id", "record")))
     request = _request_from_payload(request_payload, default_request_id=record_id)
     candidates_payload = list(payload.get("candidates", []))
+
+    # Format 0: propagate synthetic oracle labels from a parallel outcomes list onto candidates
+    outcomes_payload = list(payload.get("outcomes", []))
+    if outcomes_payload:
+        if len(outcomes_payload) != len(candidates_payload):
+            raise ValueError(
+                f"Length mismatch: {len(candidates_payload)} candidates but {len(outcomes_payload)} outcomes for record_id={record_id}"
+            )
+        for candidate_payload, outcome_payload in zip(candidates_payload, outcomes_payload):
+            extra = candidate_payload.setdefault("extra", {})
+            if "oracle_pctr" not in extra and "true_pctr" in outcome_payload:
+                extra["oracle_pctr"] = float(outcome_payload["true_pctr"])
+
     candidates = [_candidate_from_payload(candidate) for candidate in candidates_payload]
 
     observed_clicked_ad_ids: list[str] = []
