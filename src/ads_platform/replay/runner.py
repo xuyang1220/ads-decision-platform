@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ads_platform.decisioning.engine import DecisionEngine
-from ads_platform.schemas.logs import DecisionLog
+from ads_platform.schemas.logs import DecisionLog, ReplayDecisionLog
 from ads_platform.schemas.request import AuctionInput
 
 
@@ -73,12 +73,25 @@ class ReplayRunner:
     @staticmethod
     def _auction_result_dict(record: ReplayRecord, logs: list[DecisionLog]) -> dict[str, Any]:
         selected = [row for row in logs if row.selected]
+
+        replay_logs: list[dict[str, Any]] = []
+        clicked_set = set(record.observed_clicked_ad_ids)
+        spend_by_ad_id = record.observed_spend_by_ad_id
+
+        for row in logs:
+            replay_row = ReplayDecisionLog(
+                **row.model_dump(),
+                observed_clicked=int(row.ad_id in clicked_set),
+                realized_spend=float(spend_by_ad_id.get(row.ad_id, row.estimated_cost or 0.0)),
+            )
+            replay_logs.append(replay_row.model_dump(mode="json"))
+
         return {
             "record_id": record.record_id or record.auction_input.request.request_id,
             "request_id": record.auction_input.request.request_id,
             "selected_ad_ids": [row.ad_id for row in selected],
             "predicted_clicks": sum(row.pctr_calibrated for row in selected),
-            "observed_clicks_on_selected": sum(1 for row in selected if row.ad_id in record.observed_clicked_ad_ids),
-            "realized_spend": sum(record.observed_spend_by_ad_id.get(row.ad_id, row.estimated_cost or 0.0) for row in selected),
-            "decision_logs": [row.model_dump(mode="json") for row in logs],
+            "observed_clicks_on_selected": sum(1 for row in selected if row.ad_id in clicked_set),
+            "realized_spend": sum(spend_by_ad_id.get(row.ad_id, row.estimated_cost or 0.0) for row in selected),
+            "decision_logs": replay_logs,
         }

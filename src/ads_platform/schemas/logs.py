@@ -26,3 +26,8 @@ class DecisionLog(BaseModel):
     slot: int | None = None
     timestamp_ms: int
     debug: dict[str, Any] = Field(default_factory=dict)
+
+
+class ReplayDecisionLog(DecisionLog):
+    observed_clicked: int = 0
+    realized_spend: float = 0.0
