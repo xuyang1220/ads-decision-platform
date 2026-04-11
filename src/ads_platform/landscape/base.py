@@ -10,6 +10,16 @@ class BidLandscapeModel(ABC):
     def estimate(self, bid: float, context: LandscapeContext) -> LandscapeEstimate:
         raise NotImplementedError
 
+    def win_prob(self, bid: float, context: LandscapeContext) -> float:
+        return self.estimate(bid=bid, context=context).win_prob
+
+    def expected_cost(self, bid: float, context: LandscapeContext) -> float:
+        return self.estimate(bid=bid, context=context).expected_cost
+
+    def expected_spend(self, bid: float, context: LandscapeContext) -> float:
+        estimate = self.estimate(bid=bid, context=context)
+        return estimate.win_prob * estimate.expected_cost
+
     @abstractmethod
     def optimal_bid(
         self,
