@@ -11,7 +11,9 @@ from ads_platform.decisioning.engine import DecisionEngine
 from ads_platform.evaluation.pacing_diagnostics import build_pacing_summary
 from ads_platform.evaluation.replay_diagnostics import build_calibration_table, build_predicted_vs_observed
 from ads_platform.evaluation.spend_diagnostics import build_spend_summary
+from ads_platform.evaluation.spend_diagnostics import build_spend_by_bid_bucket
 from ads_platform.landscape.empirical import EmpiricalLandscapeModel, EmpiricalTable, SegmentCurve
+from ads_platform.landscape.loader import load_empirical_landscape
 from ads_platform.pacing.controllers import BoundedProportionalController
 from ads_platform.pacing.desired_curve import FrontLoadedSpendCurve, UniformSpendCurve
 from ads_platform.pacing.providers import InMemoryBudgetStateProvider
@@ -48,7 +50,9 @@ def build_curve(name: str):
     raise ValueError(name)
 
 
-def build_landscape() -> EmpiricalLandscapeModel:
+def build_landscape(landscape_artifact: str | None = None) -> EmpiricalLandscapeModel:
+    if landscape_artifact:
+        return load_empirical_landscape(landscape_artifact)
     return EmpiricalLandscapeModel(
         tables_by_key={
             "channel:feed|global": EmpiricalTable(
@@ -83,6 +87,7 @@ def main() -> None:
     parser.add_argument("--default-num-slots", type=int, default=1)
     parser.add_argument("--num-buckets", type=int, default=10)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--landscape-artifact")
     args = parser.parse_args()
 
     records = load_historical_replay_records(args.logs_path, default_num_slots=args.default_num_slots)
@@ -91,7 +96,7 @@ def main() -> None:
     budget_provider = InMemoryBudgetStateProvider(states={}, default_directive=default_directive)
     engine = DecisionEngine(
         predictor=predictor,
-        landscape_model=build_landscape(),
+        landscape_model=build_landscape(args.landscape_artifact),
         budget_state_provider=budget_provider,
         rank_scorer=ValueBasedRankScorer(use_landscape_in_score=False),
         allocator=TopKAllocator(),
@@ -101,10 +106,12 @@ def main() -> None:
     runner = BudgetReplayRunner(engine=engine, controller=controller, tracker=tracker)
     per_auction = runner.run(records)
     baseline_summary = ReplayRunner(engine).run(records)[0]
+    bid_bucket_table = build_spend_by_bid_bucket(per_auction, num_buckets=5)
 
     output = {
         "mode": args.predictor_mode,
         "budget_summary": build_spend_summary(per_auction, budget_amount=args.budget),
+        "spend_by_bid_bucket": bid_bucket_table,
         "controller_summary": build_pacing_summary(runner.controller_updates),
         "predicted_vs_observed_clicks": build_predicted_vs_observed(baseline_summary),
         "calibration_table": [to_dict(row) for row in build_calibration_table(per_auction, num_buckets=args.num_buckets)],
