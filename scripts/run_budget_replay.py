@@ -12,6 +12,7 @@ from ads_platform.evaluation.pacing_diagnostics import build_pacing_summary
 from ads_platform.evaluation.replay_diagnostics import build_calibration_table, build_predicted_vs_observed
 from ads_platform.evaluation.spend_diagnostics import build_spend_summary
 from ads_platform.evaluation.spend_diagnostics import build_spend_by_bid_bucket
+from ads_platform.evaluation.time_pacing_diagnostics import build_time_bucketed_pacing_diagnostics
 from ads_platform.landscape.empirical import EmpiricalLandscapeModel, EmpiricalTable, SegmentCurve
 from ads_platform.landscape.loader import load_empirical_landscape
 from ads_platform.pacing.controllers import BoundedProportionalController
@@ -26,8 +27,6 @@ from ads_platform.replay.runner import ReplayRunner
 from ads_platform.replay.budget_runner import BudgetReplayRunner
 from ads_platform.schemas.landscape import LandscapeContext
 from ads_platform.schemas.pacing import BudgetState, PacingDirective
-
-
 
 
 def build_predictor(args):
@@ -88,6 +87,12 @@ def main() -> None:
     parser.add_argument("--num-buckets", type=int, default=10)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--landscape-artifact")
+    parser.add_argument(
+        "--num-time-buckets",
+        type=int,
+        default=20,
+        help="Number of time buckets for pacing diagnostics."
+    )
     args = parser.parse_args()
 
     records = load_historical_replay_records(args.logs_path, default_num_slots=args.default_num_slots)
@@ -107,6 +112,7 @@ def main() -> None:
     per_auction = runner.run(records)
     baseline_summary = ReplayRunner(engine).run(records)[0]
     bid_bucket_table = build_spend_by_bid_bucket(per_auction, num_buckets=5)
+    time_bucket_pacing = build_time_bucketed_pacing_diagnostics(per_auction, num_buckets=args.num_buckets)
 
     output = {
         "mode": args.predictor_mode,
@@ -115,6 +121,7 @@ def main() -> None:
         "controller_summary": build_pacing_summary(runner.controller_updates),
         "predicted_vs_observed_clicks": build_predicted_vs_observed(baseline_summary),
         "calibration_table": [to_dict(row) for row in build_calibration_table(per_auction, num_buckets=args.num_buckets)],
+        "time_bucketed_pacing": time_bucket_pacing,
         "num_auction_details": len(per_auction),
     }
     print(json.dumps(to_dict(output), indent=2))
