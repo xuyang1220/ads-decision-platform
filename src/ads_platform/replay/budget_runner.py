@@ -22,7 +22,7 @@ class BudgetReplayRunner:
         )
         self.controller_updates: list[dict] = []
 
-    def _update_provider_state(self, timestamp_ms: int) -> None:
+    def _update_provider_state(self, timestamp_ms: int, campaign_ids: set[str] | None = None) -> None:
         budget_state = self.tracker.to_budget_state(self.controller_state, timestamp_ms)
         directive = self.controller.update(budget_state)
 
@@ -56,6 +56,8 @@ class BudgetReplayRunner:
 
         provider_state = self.tracker.to_budget_state(self.controller_state, timestamp_ms)
         self.engine.budget_state_provider.states[self.tracker.entity_id] = provider_state
+        for campaign_id in campaign_ids or set():
+            self.engine.budget_state_provider.states[campaign_id] = provider_state
 
     def run(self, records, num_slots: int = 1) -> list[dict]:
         sorted_records = sorted(records, key=lambda r: r.auction_input.request.timestamp_ms)
@@ -70,9 +72,10 @@ class BudgetReplayRunner:
 
         for record in sorted_records:
             ts_ms = record.auction_input.request.timestamp_ms
+            campaign_ids = {candidate.campaign_id for candidate in record.auction_input.candidates}
 
             # 1) Update controller/provider state for this timestamp
-            self._update_provider_state(ts_ms)
+            self._update_provider_state(ts_ms, campaign_ids=campaign_ids)
 
             # 2) Read budget state after controller update
             budget_state = self.engine.budget_state_provider.states[self.tracker.entity_id]
