@@ -112,7 +112,7 @@ def main() -> None:
     per_auction = runner.run(records)
     baseline_summary = ReplayRunner(engine).run(records)[0]
     bid_bucket_table = build_spend_by_bid_bucket(per_auction, num_buckets=5)
-    time_bucket_pacing = build_time_bucketed_pacing_diagnostics(per_auction, num_buckets=args.num_buckets)
+    time_bucket_pacing = build_time_bucketed_pacing_diagnostics(per_auction, num_buckets=args.num_time_buckets)
 
     output = {
         "mode": args.predictor_mode,

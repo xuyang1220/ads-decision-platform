@@ -59,6 +59,11 @@ class BudgetReplayRunner:
 
     def run(self, records, num_slots: int = 1) -> list[dict]:
         sorted_records = sorted(records, key=lambda r: r.auction_input.request.timestamp_ms)
+        if sorted_records:
+            self.tracker.set_replay_window(
+                sorted_records[0].auction_input.request.timestamp_ms,
+                sorted_records[-1].auction_input.request.timestamp_ms,
+            )
 
         per_auction_results: list[dict] = []
         prev_target_spend_so_far = 0.0

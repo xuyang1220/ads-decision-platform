@@ -15,8 +15,23 @@ class BudgetTracker:
     desired_curve: DesiredSpendCurve
     spend_so_far: float = 0.0
     observed_clicks: int = 0
+    replay_start_ts_ms: int | None = None
+    replay_end_ts_ms: int | None = None
+
+    def set_replay_window(self, start_ts_ms: int, end_ts_ms: int) -> None:
+        self.replay_start_ts_ms = int(start_ts_ms)
+        self.replay_end_ts_ms = int(end_ts_ms)
 
     def minute_of_day(self, timestamp_ms: int) -> int:
+        # When replay bounds are provided, map replay progress to a synthetic day
+        # so target spend can evolve over short historical windows.
+        if self.replay_start_ts_ms is not None and self.replay_end_ts_ms is not None:
+            if self.replay_end_ts_ms > self.replay_start_ts_ms:
+                frac = (int(timestamp_ms) - self.replay_start_ts_ms) / (
+                    self.replay_end_ts_ms - self.replay_start_ts_ms
+                )
+                frac = min(max(frac, 0.0), 1.0)
+                return int(frac * 1440)
         return (timestamp_ms // 60000) % 1440
 
     def snapshot(self, timestamp_ms: int) -> SpendSnapshot:
