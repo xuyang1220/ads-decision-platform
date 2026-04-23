@@ -64,7 +64,11 @@ def build_engine(args: argparse.Namespace, mode: str) -> DecisionEngine:
 def run_mode(args: argparse.Namespace, mode: str, records):
     engine = build_engine(args, mode)
     summary, per_auction = ReplayRunner(engine).run(records)
-    calibration_table = build_calibration_table(per_auction, num_buckets=args.num_buckets)
+    calibration_table = build_calibration_table(
+        per_auction,
+        num_buckets=args.num_buckets,
+        verbose=args.verbose,
+    )
 
     assert abs(
         sum(b.predicted_clicks for b in calibration_table)
@@ -91,6 +95,7 @@ def main() -> None:
     parser.add_argument("--logs-path", required=True, help="JSONL file with one auction record per line")
     parser.add_argument("--default-num-slots", type=int, default=1)
     parser.add_argument("--num-buckets", type=int, default=10)
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()
 

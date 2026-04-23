@@ -28,11 +28,17 @@ def _selected_rows(per_auction: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def build_calibration_table(per_auction: list[dict[str, Any]], num_buckets: int = 10) -> list[CalibrationBucket]:
+def build_calibration_table(
+    per_auction: list[dict[str, Any]],
+    num_buckets: int = 10,
+    verbose: bool = False,
+) -> list[CalibrationBucket]:
     rows = _selected_rows(per_auction)
-    print("num_selected_rows =", len(rows))
-    print("sample_selected_row_keys =", rows[0].keys())
-    print("sample_selected_row =", rows[0])
+    if verbose:
+        print("num_selected_rows =", len(rows))
+        if rows:
+            print("sample_selected_row_keys =", rows[0].keys())
+            print("sample_selected_row =", rows[0])
     if not rows:
         return []
 

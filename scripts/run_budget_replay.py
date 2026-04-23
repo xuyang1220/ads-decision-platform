@@ -91,6 +91,7 @@ def main() -> None:
     parser.add_argument("--date", default="1970-01-01")
     parser.add_argument("--default-num-slots", type=int, default=1)
     parser.add_argument("--num-buckets", type=int, default=10)
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--landscape-artifact")
     parser.add_argument(
@@ -131,7 +132,14 @@ def main() -> None:
         "spend_by_bid_bucket": bid_bucket_table,
         "controller_summary": build_pacing_summary(runner.controller_updates),
         "predicted_vs_observed_clicks": build_predicted_vs_observed(baseline_summary),
-        "calibration_table": [to_dict(row) for row in build_calibration_table(per_auction, num_buckets=args.num_buckets)],
+        "calibration_table": [
+            to_dict(row)
+            for row in build_calibration_table(
+                per_auction,
+                num_buckets=args.num_buckets,
+                verbose=args.verbose,
+            )
+        ],
         "time_bucketed_pacing": time_bucket_pacing,
         "num_auction_details": len(per_auction),
     }
