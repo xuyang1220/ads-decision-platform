@@ -81,6 +81,12 @@ def main() -> None:
     parser.add_argument("--budget", type=float, required=True)
     parser.add_argument("--curve", choices=["uniform", "frontloaded"], default="uniform")
     parser.add_argument("--kp", type=float, default=2.0)
+    parser.add_argument(
+        "--controller-update-interval-ms",
+        type=int,
+        default=0,
+        help="Minimum time between controller updates. 0 updates every auction.",
+    )
     parser.add_argument("--entity-id", default="global_budget")
     parser.add_argument("--date", default="1970-01-01")
     parser.add_argument("--default-num-slots", type=int, default=1)
@@ -108,7 +114,12 @@ def main() -> None:
     )
     controller = BoundedProportionalController(kp=args.kp)
     tracker = BudgetTracker(entity_id=args.entity_id, date=args.date, budget_amount=args.budget, desired_curve=build_curve(args.curve))
-    runner = BudgetReplayRunner(engine=engine, controller=controller, tracker=tracker)
+    runner = BudgetReplayRunner(
+        engine=engine,
+        controller=controller,
+        tracker=tracker,
+        controller_update_interval_ms=args.controller_update_interval_ms,
+    )
     per_auction = runner.run(records)
     baseline_summary = ReplayRunner(engine).run(records)[0]
     bid_bucket_table = build_spend_by_bid_bucket(per_auction, num_buckets=5)

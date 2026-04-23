@@ -12,17 +12,26 @@ class BudgetReplayRunner:
         engine: DecisionEngine,
         controller: BoundedProportionalController,
         tracker: BudgetTracker,
+        controller_update_interval_ms: int = 0,
     ):
         self.engine = engine
         self.controller = controller
         self.tracker = tracker
+        self.controller_update_interval_ms = max(0, int(controller_update_interval_ms))
         self.controller_state = ControllerState(
             entity_id=tracker.entity_id,
             date=tracker.date,
         )
         self.controller_updates: list[dict] = []
+        self._last_controller_update_ts_ms: int | None = None
 
-    def _update_provider_state(self, timestamp_ms: int, campaign_ids: set[str] | None = None) -> None:
+    def _sync_provider_state(self, timestamp_ms: int, campaign_ids: set[str] | None = None) -> None:
+        provider_state = self.tracker.to_budget_state(self.controller_state, timestamp_ms)
+        self.engine.budget_state_provider.states[self.tracker.entity_id] = provider_state
+        for campaign_id in campaign_ids or set():
+            self.engine.budget_state_provider.states[campaign_id] = provider_state
+
+    def _update_controller_state(self, timestamp_ms: int) -> None:
         budget_state = self.tracker.to_budget_state(self.controller_state, timestamp_ms)
         directive = self.controller.update(budget_state)
 
@@ -53,11 +62,7 @@ class BudgetReplayRunner:
             integral_error=self.controller_state.integral_error,
             debug={"reason": directive.reason},
         )
-
-        provider_state = self.tracker.to_budget_state(self.controller_state, timestamp_ms)
-        self.engine.budget_state_provider.states[self.tracker.entity_id] = provider_state
-        for campaign_id in campaign_ids or set():
-            self.engine.budget_state_provider.states[campaign_id] = provider_state
+        self._last_controller_update_ts_ms = timestamp_ms
 
     def run(self, records, num_slots: int = 1) -> list[dict]:
         sorted_records = sorted(records, key=lambda r: r.auction_input.request.timestamp_ms)
@@ -74,8 +79,15 @@ class BudgetReplayRunner:
             ts_ms = record.auction_input.request.timestamp_ms
             campaign_ids = {candidate.campaign_id for candidate in record.auction_input.candidates}
 
-            # 1) Update controller/provider state for this timestamp
-            self._update_provider_state(ts_ms, campaign_ids=campaign_ids)
+            # 1) Update controller at configured cadence; always refresh provider snapshot.
+            should_update_controller = (
+                self._last_controller_update_ts_ms is None
+                or self.controller_update_interval_ms <= 0
+                or (ts_ms - self._last_controller_update_ts_ms) >= self.controller_update_interval_ms
+            )
+            if should_update_controller:
+                self._update_controller_state(ts_ms)
+            self._sync_provider_state(ts_ms, campaign_ids=campaign_ids)
 
             # 2) Read budget state after controller update
             budget_state = self.engine.budget_state_provider.states[self.tracker.entity_id]

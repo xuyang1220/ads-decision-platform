@@ -1,0 +1,29 @@
+python - <<'PY'
+import json
+ts = []
+with open("data/historical_auctions_oracle.jsonl") as f:
+    for line in f:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        r = row.get("request", [])
+        t = int(r["timestamp_ms"])
+        ts.append(t)
+print("min_ts =", min(ts), "max_ts =", max(ts))
+PY
+
+python - <<'PY'
+import json
+ids = set()
+with open("data/historical_auctions_oracle.jsonl") as f:
+    for line in f:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        for c in row.get("candidates", []):
+            cid = c.get("campaign_id")
+            if cid is not None:
+                ids.add(cid)
+print("distinct_campaign_ids =", len(ids))
+PY
+
