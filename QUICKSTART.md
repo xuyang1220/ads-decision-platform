@@ -28,7 +28,7 @@ curl -X POST http://localhost:8000/decide \
       "device_type": "mobile",
       "country": "US",
       "placement": "feed",
-      "app_or_site": "app_1234"
+      "app_or_site": "app_123"
     },
     "candidates": [{
       "ad_id": "ad_1",
