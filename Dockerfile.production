@@ -1,0 +1,73 @@
+# Production Dockerfile with Gunicorn + Uvicorn workers
+FROM python:3.10-slim as base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Create app user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+WORKDIR /app
+
+# ============================================================
+# Stage: builder - install dependencies
+# ============================================================
+FROM base as builder
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Install Python dependencies + production server
+RUN pip install --user --no-warn-script-location -e . && \
+    pip install --user gunicorn
+
+# ============================================================
+# Stage: runtime - minimal production image
+# ============================================================
+FROM base as runtime
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY src/ ./src/
+COPY artifacts/ ./artifacts/
+
+# Copy startup script
+COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# Make sure scripts are in PATH and entrypoint is executable
+ENV PATH=/root/.local/bin:$PATH
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Change ownership to appuser
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port for FastAPI
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+# Run with Gunicorn + Uvicorn workers for production
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["gunicorn", "ads_platform.serving.api:app", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--workers", "4", \
+     "--bind", "0.0.0.0:8000", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]

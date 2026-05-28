@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # Main serving API
+  ads-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: ads-decision-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Application settings
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=info
+      
+      # Optional: Configure workers for production
+      # - WORKERS=4
+      
+      # Optional: Model/artifact paths (if overriding defaults)
+      # - CTR_BUNDLE_PATH=/app/artifacts/criteo_bundle
+      # - LANDSCAPE_PATH=/app/artifacts/fitted_landscape_oracle.json
+    
+    volumes:
+      # Mount artifacts for easy model updates without rebuild
+      - ./artifacts:/app/artifacts:ro
+      
+      # Optional: Mount configs if using config files
+      # - ./configs:/app/configs:ro
+      
+      # Optional: For development - hot reload
+      # - ./src:/app/src:ro
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    
+    networks:
+      - ads-network
+
+  # Optional: Prometheus for metrics (if implementing monitoring)
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: ads-prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus-data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #   networks:
+  #     - ads-network
+  #   depends_on:
+  #     - ads-api
+
+  # Optional: Grafana for dashboards
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: ads-grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - ads-network
+  #   depends_on:
+  #     - prometheus
+
+networks:
+  ads-network:
+    driver: bridge
+
+# Optional: Persistent volumes for monitoring
+# volumes:
+#   prometheus-data:
+#   grafana-data:
