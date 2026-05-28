@@ -14,6 +14,7 @@ services:
       # Application settings
       - PYTHONPATH=/app/src
       - LOG_LEVEL=info
+      - LOG_DIR=/app/data/logs
       
       # Optional: Configure workers for production
       # - WORKERS=4
@@ -25,6 +26,8 @@ services:
     volumes:
       # Mount artifacts for easy model updates without rebuild
       - ./artifacts:/app/artifacts:ro
+      # Persist decision/auction logs on the host for local analysis
+      - ./data/logs:/app/data/logs
       
       # Optional: Mount configs if using config files
       # - ./configs:/app/configs:ro

@@ -1,0 +1,6 @@
+# docker-compose.override.yml
+services:
+  ads-api:
+    command: uvicorn ads_platform.serving.api:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./src:/app/src:ro
