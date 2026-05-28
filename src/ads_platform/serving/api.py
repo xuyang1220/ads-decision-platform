@@ -73,13 +73,13 @@ def build_app() -> FastAPI:
             "decision_logs": [row.model_dump(mode="json") for row in logs],
         }
 
-        print(f"enable_logging: {enable_logging}")
+        # print(f"enable_logging: {enable_logging}")
         # Persist logs to disk for analysis and training
         if enable_logging:
             try:
                 # Log auction-level summary
                 auction_log_path = get_daily_log_path(log_dir, "auction_results")
-                print(f"auction_log_path: {auction_log_path}")
+                # print(f"auction_log_path: {auction_log_path}")
                 auction_summary = {
                     "request_id": auction_input.request.request_id,
                     "timestamp_ms": auction_input.request.timestamp_ms,
@@ -92,7 +92,7 @@ def build_app() -> FastAPI:
                 
                 # Log individual decision logs (one per candidate)
                 decision_log_path = get_daily_log_path(log_dir, "decision_logs")
-                print(f"decision_log_path: {decision_log_path}")
+                # print(f"decision_log_path: {decision_log_path}")
                 for log_entry in response["decision_logs"]:
                     append_jsonl(decision_log_path, log_entry)
                     
