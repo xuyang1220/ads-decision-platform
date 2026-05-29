@@ -260,6 +260,10 @@ docker-compose restart
 # The new model is loaded automatically
 ```
 
+### Step 8: Test the Decision API
+
+Consider periodically run scripts/DockerClean.ps1 to free disk spaces for Docker in WSL. See the script for details.
+
 ---
 
 ## Option 2: Local Python Environment (For Development)
