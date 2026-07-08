@@ -6,10 +6,17 @@ from ads_platform.data.criteo import CriteoOffsetDataset, parse_criteo_tsv_line
 
 
 def test_parse_criteo_tsv_line_handles_missing_values() -> None:
-    line = "1\t1\t2\t3\t4\t5\t6\t7\t8\t9\t10\t11\t12\t13\ta\tb\tc\td\te\tf\tg\th\ti\tj\tk\tl\tm\tn\to\tp\tq\tr\ts\tt\tu\tv\tw\tx\ty\tz\n"
+    # Empty fields between tabs are missing I* / C* values in Criteo train.txt.
+    line = "0\t\t2\t3\t\t5\t6\t7\t8\t9\t10\t11\t12\t13\taa\t\tcc\td\te\tf\tg\th\ti\tj\tk\tl\tm\tn\to\tp\tq\tr\ts\tt\tu\tv\tw\tx\ty\tz\n"
     row = parse_criteo_tsv_line(line)
-    assert row.label == 1
-    assert row.features["I1"] == "1"
+    assert row.label == 0
+    assert row.features["I1"] is None
+    assert row.features["I4"] is None
+    assert row.features["I2"] == "2"
+    assert row.features["I13"] == "13"
+    assert row.features["C1"] == "aa"
+    assert row.features["C2"] is None
+    assert row.features["C3"] == "cc"
     assert row.features["C26"] == "z"
 
 
